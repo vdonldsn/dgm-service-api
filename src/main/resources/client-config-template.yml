@@ -1,0 +1,93 @@
+# ============================================================
+#  client-config-template.yml
+#  This file documents every value a new client must provide.
+#  Fill this in during the client onboarding call, then
+#  transfer values to Railway environment variables.
+# ============================================================
+
+# ── Client identity ───────────────────────────────────────────
+client:
+  # Full legal business name (appears in all SMS messages)
+  business_name: "Example Home Services LLC"
+
+  # Short name / initials used as SMS prefix e.g. "DGM | Hi John..."
+  business_short_name: "EHS"
+
+  # Tagline shown in SMS confirmation messages
+  business_tagline: "Your local home services team"
+
+  # Owner's cell phone — receives urgent job and scope flag alerts
+  owner_phone: "+1XXXXXXXXXX"
+
+  # City and state for SEO and service area display
+  city: "Nashville"
+  state: "TN"
+
+# ── Timezone ─────────────────────────────────────────────────
+# Use Java timezone ID. Common US options:
+#   America/Chicago    (CT  — Nashville, Dallas, Chicago)
+#   America/New_York   (ET  — Atlanta, Charlotte, NYC)
+#   America/Denver     (MT  — Denver, Phoenix)
+#   America/Los_Angeles (PT — LA, Seattle, Portland)
+timezone: "America/Chicago"
+
+# ── Working hours (seed for availability table) ───────────────
+# Set which days the business is open and what hours.
+# 0=Sunday, 1=Monday, ..., 6=Saturday
+working_hours:
+  - day: 1  # Monday
+    start: "08:00"
+    end:   "17:00"
+  - day: 2  # Tuesday
+    start: "08:00"
+    end:   "17:00"
+  - day: 3  # Wednesday
+    start: "08:00"
+    end:   "17:00"
+  - day: 4  # Thursday
+    start: "08:00"
+    end:   "17:00"
+  - day: 5  # Friday
+    start: "08:00"
+    end:   "17:00"
+  # Add Saturday/Sunday if the business works weekends:
+  # - day: 6
+  #   start: "09:00"
+  #   end:   "14:00"
+
+# ── Scheduling rules ──────────────────────────────────────────
+scheduling:
+  # Minutes of travel buffer between jobs
+  buffer_mins: 30
+
+  # Max jobs that can be booked in a single day
+  max_jobs_per_day: 6
+
+# ── Pricing ──────────────────────────────────────────────────
+pricing:
+  # Extra dollar amount added to invoices for jobs booked
+  # or started outside normal working hours
+  after_hours_surcharge: 25.00
+
+# ── Third-party credentials (collect from client) ─────────────
+# IMPORTANT: These are sensitive. Store in Railway env vars only.
+# Never put real values in this file or commit to git.
+credentials:
+  supabase:
+    project_url:   "https://XXXX.supabase.co"
+    service_key:   "eyXXXX..."
+    jwt_secret:    "XXXX"
+
+  twilio:
+    account_sid:   "ACXXXX"
+    auth_token:    "XXXX"
+    from_number:   "+1XXXXXXXXXX"
+
+  stripe:
+    secret_key:    "sk_live_XXXX"
+    webhook_secret: "whsec_XXXX"
+
+# ── Cloudflare Pages domain (for CORS config) ─────────────────
+frontend:
+  cloudflare_pages_url: "https://your-project.pages.dev"
+  custom_domain:        "https://www.yourclientdomain.com"

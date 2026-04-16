@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "DGM Service API — Complete",
+    "description": "All endpoints for the DGM field service backend. v1 + v2. Set {{baseUrl}}, {{authToken}}, {{techToken}} in your Postman environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",    "value": "http://localhost:8080",  "type": "string" },
+    { "key": "authToken",  "value": "YOUR_OWNER_JWT_HERE",    "type": "string" },
+    { "key": "techToken",  "value": "YOUR_TECH_JWT_HERE",     "type": "string" },
+    { "key": "woId",       "value": "YOUR_WORK_ORDER_UUID",   "type": "string" },
+    { "key": "invoiceId",  "value": "YOUR_INVOICE_UUID",      "type": "string" },
+    { "key": "contractId", "value": "YOUR_CONTRACT_UUID",     "type": "string" },
+    { "key": "pmId",       "value": "YOUR_PM_ACCOUNT_UUID",   "type": "string" },
+    { "key": "techId",     "value": "YOUR_TECH_USER_UUID",    "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/actuator/health" },
+            "description": "Public. Railway health probe hits this endpoint."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Availability",
+      "item": [
+        {
+          "name": "Get available slots",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/availability/slots?date=2025-08-01&durationMins=60" },
+            "description": "Public. Customer calendar calls this to show open time slots."
+          }
+        },
+        {
+          "name": "Check conflict",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"date\": \"2025-08-01\",\n  \"startTime\": \"10:00\",\n  \"durationMins\": 60\n}" },
+            "url": { "raw": "{{baseUrl}}/api/availability/check-conflict" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings (public)",
+      "item": [
+        {
+          "name": "Standard booking",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestName\": \"John Smith\",\n  \"guestPhone\": \"+16155550000\",\n  \"guestEmail\": \"john@example.com\",\n  \"address\": \"123 Main St\",\n  \"city\": \"Nashville\",\n  \"zip\": \"37201\",\n  \"serviceCategory\": \"GENERAL_REPAIRS\",\n  \"taskName\": \"Leaky faucet repair\",\n  \"description\": \"Kitchen faucet drips constantly\",\n  \"urgencyFlag\": false,\n  \"scheduledDate\": \"2025-08-01\",\n  \"scheduledTime\": \"10:00\",\n  \"estimatedDurationMins\": 60\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/bookings" },
+            "description": "Public. No auth. Returns workOrderId."
+          }
+        },
+        {
+          "name": "Urgent booking",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestName\": \"Sarah Johnson\",\n  \"guestPhone\": \"+16155550002\",\n  \"address\": \"456 Oak Ave\",\n  \"unitNumber\": \"2B\",\n  \"city\": \"Nashville\",\n  \"zip\": \"37203\",\n  \"serviceCategory\": \"EMERGENCY\",\n  \"taskName\": \"Burst pipe first response\",\n  \"description\": \"Water spraying under sink — need help now\",\n  \"urgencyFlag\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/bookings" },
+            "description": "Public. urgencyFlag=true skips scheduling and alerts owner."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Owner — Work Orders",
+      "item": [
+        {
+          "name": "List work orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/owner/work-orders?status=new" }
+          }
+        },
+        {
+          "name": "Get WO detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/owner/work-orders/{{woId}}" }
+          }
+        },
+        {
+          "name": "Assign tech",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"techId\": \"{{techId}}\",\n  \"techName\": \"Carlos\",\n  \"scheduledDate\": \"2025-08-01\",\n  \"scheduledTime\": \"10:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/owner/work-orders/{{woId}}/assign" }
+          }
+        },
+        {
+          "name": "Reschedule",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"scheduledDate\": \"2025-08-03\",\n  \"scheduledTime\": \"14:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/owner/work-orders/{{woId}}/reschedule" }
+          }
+        },
+        {
+          "name": "Close job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"completionNotes\": \"Replaced faucet cartridge. No further issues.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/owner/work-orders/{{woId}}/close" },
+            "description": "Creates invoice draft. Auto-sends if contract flag is set."
+          }
+        },
+        {
+          "name": "Cancel job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer cancelled — rescheduling next week\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/owner/work-orders/{{woId}}/cancel" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tech — Work Orders",
+      "item": [
+        {
+          "name": "Get my day",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{techToken}}" }, { "key": "X-Tech-Id", "value": "{{techId}}" }],
+            "url": { "raw": "{{baseUrl}}/api/tech/work-orders/today" },
+            "description": "Returns today's assigned jobs ordered by scheduled time."
+          }
+        },
+        {
+          "name": "Get job detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{techToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/tech/work-orders/{{woId}}" }
+          }
+        },
+        {
+          "name": "On my way",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{techToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"techName\": \"Carlos\",\n  \"etaMins\": 20\n}" },
+            "url": { "raw": "{{baseUrl}}/api/tech/work-orders/{{woId}}/on-my-way" }
+          }
+        },
+        {
+          "name": "Complete job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{techToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"techName\": \"Carlos\",\n  \"completionNotes\": \"Replaced cartridge. Tested — no leaks.\",\n  \"afterPhotoUrls\": [\"https://example.supabase.co/storage/v1/object/work_orders/wo-123/after-1.jpg\"],\n  \"checklistState\": {\"items\": [{\"label\": \"Replace cartridge\", \"complete\": true}]}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/tech/work-orders/{{woId}}/complete" },
+            "description": "Requires completionNotes + at least 1 photo. Creates invoice draft."
+          }
+        },
+        {
+          "name": "Flag scope issue",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{techToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"ownerPhone\": \"+16155550001\",\n  \"flagType\": \"Needs licensed electrician — panel work required\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/tech/work-orders/{{woId}}/scope-flag" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        { "name": "Booking confirmed", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"guestPhone\": \"+16155550000\",\n  \"guestName\": \"John Smith\"\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/booking-confirmed"} } },
+        { "name": "Tech assigned",     "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"guestPhone\": \"+16155550000\",\n  \"guestName\": \"John Smith\",\n  \"techName\": \"Carlos\",\n  \"date\": \"Friday Aug 1\",\n  \"time\": \"10:00 AM\"\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/tech-assigned"} } },
+        { "name": "On my way",         "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"guestPhone\": \"+16155550000\",\n  \"guestName\": \"John Smith\",\n  \"techName\": \"Carlos\",\n  \"etaMins\": 20\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/on-my-way"} } },
+        { "name": "Job complete",       "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"guestPhone\": \"+16155550000\",\n  \"guestName\": \"John Smith\",\n  \"techName\": \"Carlos\"\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/job-complete"} } },
+        { "name": "Invoice sent",       "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"guestPhone\": \"+16155550000\",\n  \"guestName\": \"John Smith\",\n  \"amount\": \"95.00\",\n  \"stripePaymentLink\": \"https://buy.stripe.com/test_abc\"\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/invoice-sent"} } },
+        { "name": "Scope flag",         "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"ownerPhone\": \"+16155550001\",\n  \"woId\": \"{{woId}}\",\n  \"address\": \"123 Main St Nashville\",\n  \"flagType\": \"Needs licensed electrician\"\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/scope-flag"} } },
+        { "name": "Urgent job",         "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"ownerPhone\": \"+16155550001\",\n  \"woId\": \"{{woId}}\",\n  \"address\": \"456 Oak Ave Nashville\",\n  \"taskName\": \"Burst pipe first response\"\n}"}, "url": {"raw":"{{baseUrl}}/api/notifications/urgent-job"} } }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        { "name": "Create invoice",     "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"woId\": \"{{woId}}\"\n}"}, "url": {"raw":"{{baseUrl}}/api/invoices/create"} } },
+        { "name": "Send invoice",       "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/invoices/send/{{invoiceId}}"} } },
+        { "name": "Mark paid (manual)", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/invoices/mark-paid/{{invoiceId}}"} } },
+        { "name": "Stripe webhook",     "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Stripe-Signature","value":"t=1234,v1=simulatedSignature"}], "body": {"mode":"raw","raw":"{\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\"object\": {\"id\": \"pi_test\", \"metadata\": {\"invoice_id\": \"{{invoiceId}}\"}}}\n}"}, "url": {"raw":"{{baseUrl}}/api/invoices/stripe-webhook"} } }
+      ]
+    },
+    {
+      "name": "v2 — PM Accounts",
+      "item": [
+        { "name": "Create PM account",    "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"companyName\": \"Midtown Property Group\",\n  \"contactName\": \"Lisa Turner\",\n  \"email\": \"lisa@midtownpg.com\",\n  \"phone\": \"+16155550010\",\n  \"autoInvoiceDefault\": true\n}"}, "url": {"raw":"{{baseUrl}}/api/pm/accounts"} } },
+        { "name": "List PM accounts",     "request": { "method": "GET",  "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/pm/accounts"} } },
+        { "name": "Get PM account",       "request": { "method": "GET",  "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/pm/accounts/{{pmId}}"} } },
+        { "name": "Portfolio dashboard",  "request": { "method": "GET",  "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/pm/accounts/{{pmId}}/dashboard"}, "description": "Properties, open WOs, contracts, outstanding invoices." } },
+        { "name": "Unit history",         "request": { "method": "GET",  "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/pm/history?propertyId=PROP_UUID&unitId=2B"} } },
+        { "name": "Trigger unit vacancy", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"pmAccountId\": \"{{pmId}}\",\n  \"propertyId\": \"PROP_UUID\",\n  \"unitId\": \"2B\",\n  \"targetMoveInDate\": \"2025-08-15\"\n}"}, "url": {"raw":"{{baseUrl}}/api/pm/unit-vacancy"} } },
+        { "name": "Deactivate PM",        "request": { "method": "DELETE","header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/pm/accounts/{{pmId}}"} } }
+      ]
+    },
+    {
+      "name": "v2 — Contracts",
+      "item": [
+        { "name": "Create contract",         "request": { "method": "POST",  "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{authToken}}"}], "body": {"mode":"raw","raw":"{\n  \"pmAccountId\": \"{{pmId}}\",\n  \"propertyId\": \"PROP_UUID\",\n  \"taskTemplateId\": \"TEMPLATE_UUID\",\n  \"taskName\": \"HVAC filter replacement\",\n  \"serviceCategory\": \"PREVENTIVE_MAINTENANCE\",\n  \"cadenceType\": \"QUARTERLY\",\n  \"cadenceIntervalValue\": 1,\n  \"startDate\": \"2025-08-01\",\n  \"pricingType\": \"FLAT_RATE\",\n  \"flatRate\": 65.00,\n  \"estimatedDurationMins\": 30,\n  \"autoInvoiceOnClose\": true,\n  \"requiresPhotoOnClose\": true\n}"}, "url": {"raw":"{{baseUrl}}/api/contracts"} } },
+        { "name": "List by PM",              "request": { "method": "GET",    "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/contracts/pm/{{pmId}}"} } },
+        { "name": "List by property",        "request": { "method": "GET",    "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/contracts/property/PROP_UUID"} } },
+        { "name": "Pause contract",          "request": { "method": "POST",   "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/contracts/{{contractId}}/pause"} } },
+        { "name": "Resume contract",         "request": { "method": "POST",   "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/contracts/{{contractId}}/resume"} } },
+        { "name": "Delete contract",         "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{authToken}}"}], "url": {"raw":"{{baseUrl}}/api/contracts/{{contractId}}"} } }
+      ]
+    }
+  ]
+}

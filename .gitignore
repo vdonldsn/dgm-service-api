@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+
+# Compiled output
+*.class
+*.jar
+*.war
+
+# Environment — NEVER commit this
+.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test output
+build/reports/
