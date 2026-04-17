@@ -1,6 +1,7 @@
 package com.dgm.api.contract;
 
 import com.dgm.api.config.SupabaseClient;
+import com.dgm.api.contract.ContractDTOs.CreateContractRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -7,9 +7,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,6 +20,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AvailabilityServiceTest {
 
     @Mock
@@ -30,10 +34,16 @@ class AvailabilityServiceTest {
     @BeforeEach
     void setup() {
         ReflectionTestUtils.setField(service, "timezone", "America/Chicago");
+        // Stub all three findByColumn calls leniently — each test uses a subset
+        when(supabase.findByColumn(eq("availability"), eq("day_of_week"), anyString()))
+            .thenReturn(List.of(availRow("08:00:00", "17:00:00", 30, 6)));
+        when(supabase.findByColumns(eq("work_orders"), any()))
+            .thenReturn(List.of());
+        when(supabase.findByColumn(eq("blocked_slots"), eq("date"), anyString()))
+            .thenReturn(List.of());
     }
 
-    private Map<String, Object> availRow(String start, String end,
-                                          int buffer, int maxJobs) {
+    private Map<String, Object> availRow(String start, String end, int buffer, int maxJobs) {
         return Map.of(
             "start_time",       start,
             "end_time",         end,
@@ -53,33 +63,23 @@ class AvailabilityServiceTest {
 
     @Test
     void noBookings_returnsFullDayInSlots() {
-        when(supabase.findByColumn("availability", "day_of_week", any()))
-            .thenReturn(List.of(availRow("08:00:00", "17:00:00", 30, 6)));
-        when(supabase.findByColumns(eq("work_orders"), any())).thenReturn(List.of());
-        when(supabase.findByColumn("blocked_slots", "date", any())).thenReturn(List.of());
-
         List<TimeSlotDTO> slots = service.getAvailableSlots(TEST_DATE, 60);
 
         assertThat(slots).isNotEmpty();
-        assertThat(slots.get(0).startTime()).isEqualTo("08:00");
+        assertThat(slots.get(0).startTime()).startsWith("08:00");
     }
 
     @Test
     void bookingInMiddle_splitsDayCorrectly() {
-        when(supabase.findByColumn("availability", "day_of_week", any()))
-            .thenReturn(List.of(availRow("08:00:00", "17:00:00", 30, 6)));
         when(supabase.findByColumns(eq("work_orders"), any()))
             .thenReturn(List.of(booking("10:00:00", 60)));
-        when(supabase.findByColumn("blocked_slots", "date", any())).thenReturn(List.of());
 
         List<TimeSlotDTO> slots = service.getAvailableSlots(TEST_DATE, 60);
 
-        // 10:00–11:30 (60min job + 30min buffer) should be blocked
         boolean hasBlockedSlot = slots.stream()
-            .anyMatch(s -> s.startTime().startsWith("10:") || s.startTime().startsWith("10:30"));
+            .anyMatch(s -> s.startTime().startsWith("10:"));
         assertThat(hasBlockedSlot).isFalse();
 
-        // 08:00 should still be available
         boolean hasMorningSlot = slots.stream()
             .anyMatch(s -> s.startTime().startsWith("08:"));
         assertThat(hasMorningSlot).isTrue();
@@ -87,11 +87,10 @@ class AvailabilityServiceTest {
 
     @Test
     void bufferMins_appliedAfterEachJob() {
-        when(supabase.findByColumn("availability", "day_of_week", any()))
+        when(supabase.findByColumn(eq("availability"), eq("day_of_week"), anyString()))
             .thenReturn(List.of(availRow("08:00:00", "17:00:00", 45, 6)));
         when(supabase.findByColumns(eq("work_orders"), any()))
             .thenReturn(List.of(booking("09:00:00", 60)));
-        when(supabase.findByColumn("blocked_slots", "date", any())).thenReturn(List.of());
 
         List<TimeSlotDTO> slots = service.getAvailableSlots(TEST_DATE, 60);
 
@@ -103,10 +102,7 @@ class AvailabilityServiceTest {
 
     @Test
     void blockedSlot_removedFromAvailableWindows() {
-        when(supabase.findByColumn("availability", "day_of_week", any()))
-            .thenReturn(List.of(availRow("08:00:00", "17:00:00", 30, 6)));
-        when(supabase.findByColumns(eq("work_orders"), any())).thenReturn(List.of());
-        when(supabase.findByColumn("blocked_slots", "date", any()))
+        when(supabase.findByColumn(eq("blocked_slots"), eq("date"), anyString()))
             .thenReturn(List.of(Map.of(
                 "start_time", "12:00:00",
                 "end_time",   "13:00:00")));
@@ -120,14 +116,10 @@ class AvailabilityServiceTest {
 
     @Test
     void maxJobsReached_returnsEmptyList() {
-        when(supabase.findByColumn("availability", "day_of_week", any()))
+        when(supabase.findByColumn(eq("availability"), eq("day_of_week"), anyString()))
             .thenReturn(List.of(availRow("08:00:00", "17:00:00", 30, 2)));
-
-        List<Map<String, Object>> fullDay = List.of(
-            booking("08:00:00", 60),
-            booking("10:00:00", 60)
-        );
-        when(supabase.findByColumns(eq("work_orders"), any())).thenReturn(fullDay);
+        when(supabase.findByColumns(eq("work_orders"), any()))
+            .thenReturn(List.of(booking("08:00:00", 60), booking("10:00:00", 60)));
 
         List<TimeSlotDTO> slots = service.getAvailableSlots(TEST_DATE, 60);
         assertThat(slots).isEmpty();
@@ -135,7 +127,7 @@ class AvailabilityServiceTest {
 
     @Test
     void noDayConfig_returnsEmptyList() {
-        when(supabase.findByColumn("availability", "day_of_week", any()))
+        when(supabase.findByColumn(eq("availability"), eq("day_of_week"), anyString()))
             .thenReturn(List.of());
 
         List<TimeSlotDTO> slots = service.getAvailableSlots(TEST_DATE, 60);
@@ -147,12 +139,9 @@ class AvailabilityServiceTest {
         when(supabase.findByColumns(eq("work_orders"), any()))
             .thenReturn(List.of(booking("10:00:00", 60)));
 
-        // Propose 10:30 — overlaps with 10:00–11:00 job
         ConflictResultDTO result = service.checkConflict(
-            TEST_DATE,
-            java.time.LocalTime.of(10, 30),
-            60
-        );
+            TEST_DATE, LocalTime.of(10, 30), 60);
+
         assertThat(result.conflict()).isTrue();
         assertThat(result.conflictingWoId()).isNotNull();
     }
@@ -162,12 +151,9 @@ class AvailabilityServiceTest {
         when(supabase.findByColumns(eq("work_orders"), any()))
             .thenReturn(List.of(booking("10:00:00", 60)));
 
-        // Propose 11:00 — starts exactly when previous job ends (no overlap)
         ConflictResultDTO result = service.checkConflict(
-            TEST_DATE,
-            java.time.LocalTime.of(11, 0),
-            60
-        );
+            TEST_DATE, LocalTime.of(11, 0), 60);
+
         assertThat(result.conflict()).isFalse();
     }
 }

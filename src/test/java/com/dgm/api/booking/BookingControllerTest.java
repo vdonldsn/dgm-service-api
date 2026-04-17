@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
@@ -18,6 +20,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class BookingControllerTest {
 
     @Mock private SupabaseClient      supabase;
@@ -32,6 +35,9 @@ class BookingControllerTest {
         when(supabase.insert(eq("work_orders"), any()))
             .thenReturn(Map.of("id", "wo-test-123"));
         when(business.getOwnerPhone()).thenReturn("+16155550001");
+        // sendBookingConfirmed and sendUrgentJob are void — no stubbing needed
+        doNothing().when(notificationService).sendBookingConfirmed(anyString(), anyString());
+        doNothing().when(notificationService).sendUrgentJob(any(), anyString(), anyString(), anyString());
     }
 
     private BookingRequest standardRequest() {
@@ -53,8 +59,6 @@ class BookingControllerTest {
             true, null, null, null
         );
     }
-
-    // ── Standard booking ──────────────────────────────────────────────────────
 
     @Test
     void standardBooking_createsWorkOrderWithCorrectFields() {
@@ -95,10 +99,9 @@ class BookingControllerTest {
     void standardBooking_doesNotAlertOwner() {
         controller.createBooking(standardRequest());
 
-        verify(notificationService, never()).sendUrgentJob(any(), any(), any(), any());
+        verify(notificationService, never()).sendUrgentJob(
+            any(), any(), any(), any());
     }
-
-    // ── Urgent booking ────────────────────────────────────────────────────────
 
     @Test
     void urgentBooking_setsCorrectJobType() {
@@ -137,8 +140,6 @@ class BookingControllerTest {
         String address = captor.getValue().get("guest_address").toString();
         assertThat(address).contains("Unit 2B");
     }
-
-    // ── Null urgencyFlag defaults to false ────────────────────────────────────
 
     @Test
     void nullUrgencyFlag_treatedAsNonUrgent() {

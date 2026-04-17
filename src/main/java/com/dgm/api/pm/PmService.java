@@ -1,6 +1,8 @@
 package com.dgm.api.pm;
 
 import com.dgm.api.config.SupabaseClient;
+import com.dgm.api.pm.PmDTOs.CreatePmRequest;
+import com.dgm.api.pm.PmDTOs.UnitVacancyRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

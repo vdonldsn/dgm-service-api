@@ -102,7 +102,7 @@ public class NotificationService {
      * Fire-and-forget SMS. Logs failures but never throws —
      * a Twilio failure must not block the booking or job flow.
      */
-    void sendSms(String toPhone, String message) {
+    public void sendSms(String toPhone, String message) {
         try {
             Message sent = Message.creator(
                     new PhoneNumber(toPhone),
