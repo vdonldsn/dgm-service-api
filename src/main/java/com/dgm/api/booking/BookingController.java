@@ -1,6 +1,7 @@
 package com.dgm.api.booking;
 
 import com.dgm.api.config.BusinessProperties;
+import com.dgm.api.crm.CrmService;
 import com.dgm.api.config.SupabaseClient;
 import com.dgm.api.notification.NotificationService;
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ public class BookingController {
     private final SupabaseClient      supabase;
     private final NotificationService notificationService;
     private final BusinessProperties  business;
+    private final CrmService          crmService;
 
     /**
      * POST /api/bookings
@@ -67,6 +69,15 @@ public class BookingController {
 
         Map<String, Object> created = supabase.insert("work_orders", wo);
         String woId = created.get("id").toString();
+
+        // Auto-create or match CRM customer profile — fire-and-forget
+        try {
+            crmService.findOrCreateFromBooking(
+                req.guestName(), req.guestPhone(), req.guestEmail(),
+                fullAddress, req.unitNumber(), req.city(), req.zip(), woId);
+        } catch (Exception e) {
+            log.warn("CRM customer create failed for WO {}: {}", woId, e.getMessage());
+        }
 
         // Booking confirmed SMS to guest — fire-and-forget
         notificationService.sendBookingConfirmed(req.guestPhone(), req.guestName());

@@ -61,6 +61,9 @@ public class SecurityConfig {
                 // Booking — public (guest submits form, no auth)
                 .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
 
+                // CRM — owner and admin only
+                .requestMatchers("/api/crm/**").hasRole("OWNER")
+
                 // Owner work order management
                 .requestMatchers("/api/owner/work-orders/**").hasRole("OWNER")
 
